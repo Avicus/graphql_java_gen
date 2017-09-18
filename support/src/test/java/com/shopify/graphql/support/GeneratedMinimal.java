@@ -77,7 +77,7 @@ public class GeneratedMinimal {
         }
 
         public String toString() {
-            return _queryBuilder.toString();
+            return builder().toString();
         }
     }
 

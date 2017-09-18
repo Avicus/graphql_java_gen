@@ -1,0 +1,19 @@
+<%= class_head %>
+
+import net.avicus.magma.api.types.avicus.AvicusQueryQuery;
+import net.avicus.magma.api.types.avicus.AvicusQueryQueryDefinition;
+import net.avicus.magma.api.types.mutation.MutationQuery;
+import net.avicus.magma.api.types.mutation.MutationQueryDefinition;
+
+public class QLBuilder {
+  <% [[:query, schema.query_root_name], [:mutation, schema.mutation_root_name]].each do |operation_type, root_name| %>
+  <% next unless root_name %>
+  public static <%= root_name %>Query <%= operation_type %>(<%= root_name %>QueryDefinition queryDef) {
+    StringBuilder queryString = new StringBuilder("<%= operation_type unless operation_type == :query %>{");
+    <%= root_name %>Query query = new <%= root_name %>Query(queryString);
+    queryDef.define(query);
+    queryString.append('}');
+    return query;
+  }
+  <% end %>
+}

@@ -45,7 +45,7 @@ public abstract class Query<T extends Query> {
         if (firstSelection) {
             firstSelection = false;
         } else {
-            _queryBuilder.append(',');
+            builder().append(',');
         }
     }
 
@@ -55,19 +55,19 @@ public abstract class Query<T extends Query> {
         }
 
         startSelection();
-        _queryBuilder.append("... on ");
-        _queryBuilder.append(typeName);
-        _queryBuilder.append('{');
+        builder().append("... on ");
+        builder().append(typeName);
+        builder().append('{');
     }
 
     protected void startField(String fieldName) {
         startSelection();
-        _queryBuilder.append(fieldName);
+        builder().append(fieldName);
         if (aliasSuffix != null) {
-            _queryBuilder.append(ALIAS_SUFFIX_SEPARATOR);
-            _queryBuilder.append(aliasSuffix);
-            _queryBuilder.append(ALIAS_DELIMITER);
-            _queryBuilder.append(fieldName);
+            builder().append(ALIAS_SUFFIX_SEPARATOR);
+            builder().append(aliasSuffix);
+            builder().append(ALIAS_DELIMITER);
+            builder().append(fieldName);
             aliasSuffix = null;
         }
     }

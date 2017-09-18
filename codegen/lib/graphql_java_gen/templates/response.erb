@@ -1,0 +1,33 @@
+<%= class_head %>
+
+public class <%= operation_type.capitalize %>Response {
+    private TopLevelResponse response;
+    private <%= root_name %> data;
+
+    public <%= operation_type.capitalize %>Response(TopLevelResponse response) throws SchemaViolationError {
+        this.response = response;
+        this.data = response.getData() != null ? new <%= root_name %>(response.getData()) : null;
+    }
+
+    public <%= root_name %> getData() {
+        return data;
+    }
+
+    public List<Error> getErrors() {
+        return response.getErrors();
+    }
+
+    public String toJson() {
+        return new Gson().toJson(response);
+    }
+
+    public String prettyPrintJson() {
+      final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+      return gson.toJson(response);
+    }
+
+    public static <%= operation_type.capitalize %>Response fromJson(String json) throws SchemaViolationError {
+        final TopLevelResponse response = new Gson().fromJson(json, TopLevelResponse.class);
+        return new <%= operation_type.capitalize %>Response(response);
+    }
+}

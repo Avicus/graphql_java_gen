@@ -131,14 +131,14 @@ public class Generated {
         public EntryQuery onIntegerEntry(IntegerEntryQueryDefinition queryDef) {
             startInlineFragment("IntegerEntry");
             queryDef.define(new IntegerEntryQuery(_queryBuilder));
-            _queryBuilder.append('}');
+            builder().append('}');
             return this;
         }
 
         public EntryQuery onStringEntry(StringEntryQueryDefinition queryDef) {
             startInlineFragment("StringEntry");
             queryDef.define(new StringEntryQuery(_queryBuilder));
-            _queryBuilder.append('}');
+            builder().append('}');
             return this;
         }
     }
@@ -253,14 +253,14 @@ public class Generated {
         public EntryUnionQuery onIntegerEntry(IntegerEntryQueryDefinition queryDef) {
             startInlineFragment("IntegerEntry");
             queryDef.define(new IntegerEntryQuery(_queryBuilder));
-            _queryBuilder.append('}');
+            builder().append('}');
             return this;
         }
 
         public EntryUnionQuery onStringEntry(StringEntryQueryDefinition queryDef) {
             startInlineFragment("StringEntry");
             queryDef.define(new StringEntryQuery(_queryBuilder));
-            _queryBuilder.append('}');
+            builder().append('}');
             return this;
         }
     }
@@ -491,10 +491,10 @@ public class Generated {
         public MutationQuery setInteger(SetIntegerInput input) {
             startField("set_integer");
 
-            _queryBuilder.append("(input:");
+            builder().append("(input:");
             input.appendTo(_queryBuilder);
 
-            _queryBuilder.append(')');
+            builder().append(')');
 
             return this;
         }
@@ -502,13 +502,13 @@ public class Generated {
         public MutationQuery setString(String key, String value) {
             startField("set_string");
 
-            _queryBuilder.append("(key:");
+            builder().append("(key:");
             Query.appendQuotedString(_queryBuilder, key.toString());
 
-            _queryBuilder.append(",value:");
+            builder().append(",value:");
             Query.appendQuotedString(_queryBuilder, value.toString());
 
-            _queryBuilder.append(')');
+            builder().append(')');
 
             return this;
         }
@@ -538,18 +538,18 @@ public class Generated {
         public MutationQuery setStringWithDefault(String key, SetStringWithDefaultArgumentsDefinition argsDef) {
             startField("set_string_with_default");
 
-            _queryBuilder.append("(key:");
+            builder().append("(key:");
             Query.appendQuotedString(_queryBuilder, key.toString());
 
             argsDef.define(new SetStringWithDefaultArguments(_queryBuilder));
 
-            _queryBuilder.append(')');
+            builder().append(')');
 
             return this;
         }
 
         public String toString() {
-            return _queryBuilder.toString();
+            return builder().toString();
         }
     }
 
@@ -669,16 +669,16 @@ public class Generated {
         public QueryRootQuery entries(int first, EntriesArgumentsDefinition argsDef, EntryQueryDefinition queryDef) {
             startField("entries");
 
-            _queryBuilder.append("(first:");
-            _queryBuilder.append(first);
+            builder().append("(first:");
+            builder().append(first);
 
             argsDef.define(new EntriesArguments(_queryBuilder));
 
-            _queryBuilder.append(')');
+            builder().append(')');
 
-            _queryBuilder.append('{');
+            builder().append('{');
             queryDef.define(new EntryQuery(_queryBuilder));
-            _queryBuilder.append('}');
+            builder().append('}');
 
             return this;
         }
@@ -689,14 +689,14 @@ public class Generated {
         public QueryRootQuery entry(String key, EntryQueryDefinition queryDef) {
             startField("entry");
 
-            _queryBuilder.append("(key:");
+            builder().append("(key:");
             Query.appendQuotedString(_queryBuilder, key.toString());
 
-            _queryBuilder.append(')');
+            builder().append(')');
 
-            _queryBuilder.append('{');
+            builder().append('{');
             queryDef.define(new EntryQuery(_queryBuilder));
-            _queryBuilder.append('}');
+            builder().append('}');
 
             return this;
         }
@@ -707,14 +707,14 @@ public class Generated {
         public QueryRootQuery entryUnion(String key, EntryUnionQueryDefinition queryDef) {
             startField("entry_union");
 
-            _queryBuilder.append("(key:");
+            builder().append("(key:");
             Query.appendQuotedString(_queryBuilder, key.toString());
 
-            _queryBuilder.append(')');
+            builder().append(')');
 
-            _queryBuilder.append('{');
+            builder().append('{');
             queryDef.define(new EntryUnionQuery(_queryBuilder));
-            _queryBuilder.append('}');
+            builder().append('}');
 
             return this;
         }
@@ -725,10 +725,10 @@ public class Generated {
         public QueryRootQuery integer(String key) {
             startField("integer");
 
-            _queryBuilder.append("(key:");
+            builder().append("(key:");
             Query.appendQuotedString(_queryBuilder, key.toString());
 
-            _queryBuilder.append(')');
+            builder().append(')');
 
             return this;
         }
@@ -749,7 +749,7 @@ public class Generated {
             public KeysArguments type(KeyType value) {
                 if (value != null) {
                     startArgument("type");
-                    _queryBuilder.append(value.toString());
+                    builder().append(value.toString());
                 }
                 return this;
             }
@@ -766,12 +766,12 @@ public class Generated {
         public QueryRootQuery keys(int first, KeysArgumentsDefinition argsDef) {
             startField("keys");
 
-            _queryBuilder.append("(first:");
-            _queryBuilder.append(first);
+            builder().append("(first:");
+            builder().append(first);
 
             argsDef.define(new KeysArguments(_queryBuilder));
 
-            _queryBuilder.append(')');
+            builder().append(')');
 
             return this;
         }
@@ -782,10 +782,10 @@ public class Generated {
         public QueryRootQuery string(String key) {
             startField("string");
 
-            _queryBuilder.append("(key:");
+            builder().append("(key:");
             Query.appendQuotedString(_queryBuilder, key.toString());
 
-            _queryBuilder.append(')');
+            builder().append(')');
 
             return this;
         }
@@ -793,10 +793,10 @@ public class Generated {
         public QueryRootQuery ttl(String key) {
             startField("ttl");
 
-            _queryBuilder.append("(key:");
+            builder().append("(key:");
             Query.appendQuotedString(_queryBuilder, key.toString());
 
-            _queryBuilder.append(')');
+            builder().append(')');
 
             return this;
         }
@@ -804,10 +804,10 @@ public class Generated {
         public QueryRootQuery type(String key) {
             startField("type");
 
-            _queryBuilder.append("(key:");
+            builder().append("(key:");
             Query.appendQuotedString(_queryBuilder, key.toString());
 
-            _queryBuilder.append(')');
+            builder().append(')');
 
             return this;
         }
@@ -819,7 +819,7 @@ public class Generated {
         }
 
         public String toString() {
-            return _queryBuilder.toString();
+            return builder().toString();
         }
     }
 
@@ -1165,52 +1165,52 @@ public class Generated {
 
         public void appendTo(StringBuilder _queryBuilder) {
             String separator = "";
-            _queryBuilder.append('{');
+            builder().append('{');
 
-            _queryBuilder.append(separator);
+            builder().append(separator);
             separator = ",";
-            _queryBuilder.append("key:");
+            builder().append("key:");
             Query.appendQuotedString(_queryBuilder, key.toString());
 
-            _queryBuilder.append(separator);
+            builder().append(separator);
             separator = ",";
-            _queryBuilder.append("value:");
-            _queryBuilder.append(value);
+            builder().append("value:");
+            builder().append(value);
 
             if (this.ttlSeen) {
-                _queryBuilder.append(separator);
+                builder().append(separator);
                 separator = ",";
-                _queryBuilder.append("ttl:");
+                builder().append("ttl:");
                 if (ttl != null) {
                     Query.appendQuotedString(_queryBuilder, ttl.toString());
                 } else {
-                    _queryBuilder.append("null");
+                    builder().append("null");
                 }
             }
 
             if (this.negateSeen) {
-                _queryBuilder.append(separator);
+                builder().append(separator);
                 separator = ",";
-                _queryBuilder.append("negate:");
+                builder().append("negate:");
                 if (negate != null) {
-                    _queryBuilder.append(negate);
+                    builder().append(negate);
                 } else {
-                    _queryBuilder.append("null");
+                    builder().append("null");
                 }
             }
 
             if (this.apiClientSeen) {
-                _queryBuilder.append(separator);
+                builder().append(separator);
                 separator = ",";
-                _queryBuilder.append("api_client:");
+                builder().append("api_client:");
                 if (apiClient != null) {
                     Query.appendQuotedString(_queryBuilder, apiClient.toString());
                 } else {
-                    _queryBuilder.append("null");
+                    builder().append("null");
                 }
             }
 
-            _queryBuilder.append('}');
+            builder().append('}');
         }
     }
 

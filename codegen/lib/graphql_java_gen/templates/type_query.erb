@@ -1,0 +1,72 @@
+<%= class_head %>
+
+public class <%= name %> extends Query<<%= name %>> {
+    public <%= name %>(StringBuilder builder) {
+        super(builder);
+        <% if type.object? && type.implement?("Node") %>
+            startField("id");
+        <% end %>
+        <% unless type.object? %>
+            startField("__typename");
+        <% end %>
+    }
+
+    private StringBuilder builder() {
+        return _queryBuilder;
+    }
+
+    <% fields.each do |field| %>
+        <% next if field.name == "id" && type.object? && type.implement?("Node") %>
+        <% unless field.optional_args.empty? %>
+          <%= java_doc(field) %>
+          public <%= name %> <%= escape_reserved_word(field.camelize_name.gsub('Payload', '')) %>(<%= java_arg_defs(field, skip_optional: true) %>) {
+              return <%= escape_reserved_word(field.camelize_name) %>(<%= java_arg_expresions_with_empty_optional_args(field) %>);
+          }
+          <% end %>
+
+          <%= java_doc(field) %>
+          <%= field.deprecated? ? "@Deprecated\n" : '' -%>
+          public <%= name %> <%= escape_reserved_word(field.camelize_name.gsub('Payload', '')) %>(<%= java_arg_defs(field) %>) {
+              startField("<%= field.name %>");
+              <% unless field.args.empty? %>
+                  <% if field.required_args.empty? %>
+                      <%= field.classify_name %>Arguments args = new <%= field.classify_name %>Arguments(builder());
+                      argsDef.define(args);
+                      <%= field.classify_name %>Arguments.end(args);
+                  <% else %>
+                      <% field.required_args.each_with_index do |arg, i| %>
+                        builder().append("<%= i == 0 ? "(" : "," %><%= arg.name %>:");
+                        <%= generate_build_input_code(escape_reserved_word(arg.camelize_name), arg.type) %>
+                      <% end %>
+                      <% unless field.optional_args.empty? %>
+                          argsDef.define(new <%= field.classify_name %>Arguments(builder()));
+                      <% end %>
+                      builder().append(')');
+                  <% end %>
+              <% end %>
+              <% if field.subfields? %>
+                  builder().append('{');
+                  queryDef.define(new <%= field.type.unwrap.name.gsub('Payload', '') %>Query(builder()));
+                  builder().append('}');
+              <% end %>
+              return this;
+          }
+      <% end %>
+
+    <% unless type.object? %>
+        <% type.possible_types.each do |possible_type| %>
+            public <%= name %> on<%= possible_name %>(<%= possible_name %>QueryDefinition queryDef) {
+                startInlineFragment("<%= possible_name %>");
+                queryDef.define(new <%= possible_name %>Query(builder));
+                builder().append('}');
+                return this;
+            }
+        <% end %>
+    <% end %>
+
+    <% if schema.root_name?(name) %>
+      public String toString() {
+          return builder().toString();
+      }
+    <% end %>
+}

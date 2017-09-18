@@ -87,7 +87,7 @@ if (data != null) {
 ## Lambda Expressions
 
 The java 8 lambda expressions feature is essential for having a
-nice syntax for the query builder. This feature is also available
+nice syntax for the query builder(). This feature is also available
 for Android apps by using the
 [Jack toolchain](https://source.android.com/source/jack.html).
 

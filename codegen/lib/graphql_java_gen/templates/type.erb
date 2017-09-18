@@ -1,0 +1,84 @@
+<%= class_head %>
+
+<%= java_doc(type) %>
+public class <%= class_name %> extends AbstractResponse<<%= class_name %>> <%= java_implements(type) %>{
+
+    public <%= class_name %>(JsonObject fields) throws SchemaViolationError {
+      for (Map.Entry<String, JsonElement> field : fields.entrySet()) {
+        String key = field.getKey();
+        String fieldName = getFieldName(key);
+        switch (fieldName) {
+          <% fields.each do |field| %>
+            case "<%= field.name %>": {
+              <% generate_build_output_code("field.getValue()", field.type) do |statements, expr| %>
+                <%= statements %>
+                responseData.put(key, <%= expr %>);
+              <% end %>
+              break;
+            }
+          <% end %>
+          case "__typename": {
+            responseData.put(key, jsonAsString(field.getValue(), key));
+            break;
+          }
+          default: {
+            throw new SchemaViolationError(this, key, field.getValue());
+          }
+        }
+      }
+    }
+
+    <% if type.object? && type.implement?("Node") %>
+        public <%= class_name %>(<%= scalars['ID'].non_nullable_type %> id) {
+          this();
+          optimisticData.put("id", id);
+        }
+    <% end %>
+
+    <% if type.object? %>
+        public String getGraphQlTypeName() {
+            return "<%= type.name %>";
+        }
+    <% else %>
+        public static <%= type.name %> create(JsonObject fields) throws SchemaViolationError {
+            String typeName = fields.getAsJsonPrimitive("__typename").getAsString();
+            switch (typeName) {
+                <% type.possible_types.each do |possible_type| %>
+                    case "<%= possible_type.name %>": {
+                        return new <%= possible_type.name %>(fields);
+                    }
+                <% end %>
+                default: {
+                    return new <%= class_name %>(fields);
+                }
+            }
+        }
+
+        public String getGraphQlTypeName() {
+            return (String) get("__typename");
+        }
+    <% end %>
+
+    <% fields.each do |field| %>
+        <%= java_doc(field) %>
+        <%= java_annotations(field) %>
+        public <%= java_output_type(field.type) %> get<%= field.classify_name %>() {
+          return (<%= java_output_type(field.type) %>) get("<%= field.name %>");
+        }
+
+        <% next if field.name == "id" && type.object? && type.implement?("Node") %>
+        public <%= class_name %> set<%= field.classify_name %>(<%= java_output_type(field.type) %> arg) {
+          optimisticData.put(getKey("<%= field.name %>"), arg);
+          return this;
+        }
+    <% end %>
+
+      public boolean unwrapsToObject(String key) {
+        switch (getFieldName(key)) {
+          <% fields.each do |field| %>
+            case "<%= field.name %>": return <%= field.type.unwrap.object? %>;
+          <% end %>
+          default: return false;
+        }
+      }
+}

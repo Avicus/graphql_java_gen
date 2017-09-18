@@ -1,0 +1,76 @@
+<%= class_head %>
+
+public class <%= type.name %> implements Serializable {
+    <% type.required_input_fields.each do |field| %>
+      private <%= java_input_type(field.type) %> <%= escape_reserved_word(field.camelize_name) %>;
+    <% end %>
+    <% type.optional_input_fields.each do |field| %>
+      private <%= java_input_type(field.type) %> <%= escape_reserved_word(field.camelize_name) %>;
+      private boolean <%= field.camelize_name %>Seen = false;
+    <% end %>
+
+    <% unless type.required_input_fields.empty? %>
+      public <%= type.name %>(<%= type.required_input_fields.map{ |field| "#{java_input_type(field.type)} #{escape_reserved_word(field.camelize_name)}" }.join(', ') %>) {
+          <% type.required_input_fields.each do |field| %>
+              this.<%= escape_reserved_word(field.camelize_name) %> = <%= escape_reserved_word(field.camelize_name) %>;
+          <% end %>
+      }
+    <% end %>
+
+    <% type.required_input_fields.each do |field| %>
+      <%= java_annotations(field) %>
+      public <%= java_input_type(field.type) %> get<%= field.classify_name %>() {
+          return <%= escape_reserved_word(field.camelize_name) %>;
+      }
+
+      public <%= type.name %> set<%= field.classify_name %>(<%= java_annotations(field, in_argument: true) %><%= java_input_type(field.type) %> <%= escape_reserved_word(field.camelize_name) %>) {
+          this.<%= escape_reserved_word(field.camelize_name) %> = <%= escape_reserved_word(field.camelize_name) %>;
+          return this;
+      }
+
+    <% end %>
+    <% type.optional_input_fields.each do |field| %>
+      <%= java_annotations(field) %>
+      public <%= java_input_type(field.type) %> get<%= field.classify_name %>() {
+          return <%= escape_reserved_word(field.camelize_name) %>;
+      }
+
+      public <%= type.name %> set<%= field.classify_name %>(<%= java_annotations(field, in_argument: true) %><%= java_input_type(field.type) %> <%= escape_reserved_word(field.camelize_name) %>) {
+          this.<%= escape_reserved_word(field.camelize_name) %> = <%= escape_reserved_word(field.camelize_name) %>;
+          this.<%= field.camelize_name %>Seen = true;
+          return this;
+      }
+
+      // Unsets the <%= escape_reserved_word(field.camelize_name) %> property so that it is not serialized.
+      public <%= type.name %> unset<%= field.classify_name %>() {
+          this.<%= escape_reserved_word(field.camelize_name) %> = null;
+          this.<%= field.camelize_name %>Seen = false;
+          return this;
+      }
+
+    <% end %>
+
+    public void appendTo(StringBuilder builder) {
+      String separator = "";
+      builder.append('{');
+      <% type.required_input_fields.each do |field| %>
+        builder.append(separator);
+        separator = ",";
+        builder.append("<%= field.name %>:");
+        <%= generate_build_input_code(escape_reserved_word(field.camelize_name), field.type, name: 'builder') %>
+      <% end %>
+      <% type.optional_input_fields.each do |field| %>
+        if (this.<%= field.camelize_name %>Seen) {
+          builder.append(separator);
+          separator = ",";
+          builder.append("<%= field.name %>:");
+          if (<%= escape_reserved_word(field.camelize_name) %> != null) {
+            <%= generate_build_input_code(escape_reserved_word(field.camelize_name), field.type, name: 'builder') %>
+          } else {
+            builder.append("null");
+          }
+        }
+      <% end %>
+      builder.append('}');
+    }
+}

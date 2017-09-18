@@ -1,0 +1,25 @@
+<%= class_head %>
+
+public class <%= field.classify_name %>Arguments extends Arguments {
+    private final StringBuilder builder;
+
+    private StringBuilder builder() {
+      return builder;
+    }
+
+    public <%= field.classify_name %>Arguments(StringBuilder builder) {
+        super(builder, <%= !!field.required_args.empty? %>);
+        this.builder = builder;
+    }
+
+    <% field.optional_args.each do |arg| %>
+        <%= java_doc(arg) %>
+        public <%= field.classify_name %>Arguments <%= escape_reserved_word(arg.camelize_name) %>(<%= java_input_type(arg.type) %> value) {
+            if (value != null) {
+                startArgument("<%= arg.name %>");
+                <%= generate_build_input_code('value', arg.type) %>
+            }
+            return this;
+        }
+    <% end %>
+}

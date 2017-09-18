@@ -1,0 +1,12 @@
+<%= class_head %>
+
+<% if type.name == 'Node' %>
+  public interface <%= type.name %> extends com.shopify.graphql.support.Node {
+<% else %>
+  public interface <%= type.name %> {
+<% end %>
+    String getGraphQlTypeName();
+    <% fields.each do |field| %>
+        <%= java_output_type(field.type) %> get<%= field.classify_name %>();
+    <% end %>
+}

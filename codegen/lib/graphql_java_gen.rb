@@ -7,7 +7,7 @@ require 'erb'
 require 'set'
 
 class GraphQLJavaGen
-  attr_reader :schema, :package_name, :scalars, :imports, :script_name, :schema_name, :include_deprecated
+  attr_reader :schema, :package_name, :scalars, :imports, :script_name, :schema_name, :include_deprecated, :annotations
 
   def initialize(schema,
     package_name:, nest_under:, script_name: 'graphql_java_gen gem',
@@ -25,27 +25,101 @@ class GraphQLJavaGen
   end
 
   def save(path)
-    File.write(path, generate)
-  end
+    write(path, "", "QLBuilder.java", BASE, {schema: schema})
+    [[:query, schema.query_root_name], [:mutation, schema.mutation_root_name]].each do |operation_type, root_name|
+      next unless root_name
+      write(path, "", "#{operation_type.capitalize}Response.java", RESPONSE, {root_name: root_name, operation_type: operation_type})
+    end
 
-  def generate
-    reformat(TEMPLATE_ERB.result(binding))
+    schema.types.reject{ |type| type.name.start_with?('__') || type.scalar? }.each do |type|
+      case type.kind
+      when 'OBJECT', 'INTERFACE', 'UNION'
+        fields = type.fields(include_deprecated: include_deprecated) || []
+        name = (type.name + 'Query')
+        where = "/types/#{name.underscore}"
+        where = type.name.include?('Payload') ? "/payloads/#{name.underscore}" : where
+        where = where.gsub('_query', '')
+        name = name.gsub('Payload', '')
+        write(path, where, "#{name}Definition.java", QUERY_DEF, {type: type, name: name})
+        write(path, where, "#{name}.java", TYPE_QUERY, {type: type, fields: fields, name: name})
+        fields.each do |field|
+          next if field.name == "id" && type.object? && type.implement?("Node")
+          unless field.optional_args.empty?
+            write(path,  "/types/#{type.name.underscore}", "#{field.classify_name}Arguments.java", FIELD_ARGS, {field: field})
+            write(path, "/types/#{type.name.underscore}", "#{field.classify_name}ArgumentsDefinition.java", ARG_DEF, {field: field})
+          end
+        end
+        unless type.object?
+          write(path, "/types/#{type.name.underscore}", "#{type.name}.java", OBJECT_INT, {type: type})
+        end
+        class_name = type.object? ? type.name : "Unknown#{type.name}"
+        where = (class_name.include?('Payload') ? '/payloads/' : "/types/") + "#{type.name.underscore}"
+        class_name = class_name.gsub('Payload', '')
+        write(path, where, "#{class_name}.java", TYPE, {type: type, class_name: class_name, fields: fields})
+      when 'INPUT_OBJECT'
+        write(path, "/inputs", "#{type.name}.java", INPUT_OBJECT, {type: type})
+      when 'ENUM'
+        write(path, "/types/#{type.name.underscore}", "#{type.name}.java", ENUM_DEF, {type: type})
+      else
+        raise NotImplementedError, "unhandled #{type.kind} type #{type.name}"
+      end
+    end
   end
-
-  private
 
   class << self
     private
 
     def erb_for(template_filename)
-      erb = ERB.new(File.read(template_filename), nil, '-')
-      erb.filename = template_filename
-      erb
+      ERB.new(File.read(template_filename), nil, '-')
     end
   end
 
-  TEMPLATE_ERB = erb_for(File.expand_path("../graphql_java_gen/templates/APISchema.java.erb", __FILE__))
-  private_constant :TEMPLATE_ERB
+  BASE = erb_for(File.expand_path("../graphql_java_gen/templates/base.erb", __FILE__))
+  RESPONSE = erb_for(File.expand_path("../graphql_java_gen/templates/response.erb", __FILE__))
+  QUERY_DEF = erb_for(File.expand_path("../graphql_java_gen/templates/query_def.erb", __FILE__))
+  TYPE_QUERY = erb_for(File.expand_path("../graphql_java_gen/templates/type_query.erb", __FILE__))
+  FIELD_ARGS = erb_for(File.expand_path("../graphql_java_gen/templates/field_args.erb", __FILE__))
+  ARG_DEF = erb_for(File.expand_path("../graphql_java_gen/templates/arg_def.erb", __FILE__))
+  OBJECT_INT = erb_for(File.expand_path("../graphql_java_gen/templates/object_int.erb", __FILE__))
+  TYPE = erb_for(File.expand_path("../graphql_java_gen/templates/type.erb", __FILE__))
+  INPUT_OBJECT = erb_for(File.expand_path("../graphql_java_gen/templates/input_object.erb", __FILE__))
+  ENUM_DEF = erb_for(File.expand_path("../graphql_java_gen/templates/enum_def.erb", __FILE__))
+
+  private_constant :BASE, :RESPONSE, :QUERY_DEF, :TYPE_QUERY, :FIELD_ARGS, :FIELD_ARGS, :ARG_DEF, :OBJECT_INT, :TYPE, :INPUT_OBJECT, :ENUM_DEF
+
+  class HashBinding < GraphQLJavaGen
+
+    attr_reader :schema, :scalars, :imports, :script_name, :schema_name, :include_deprecated
+
+    def initialize(data, hash)
+      @schema = data.schema
+      @schema_name = data.schema_name
+      @script_name = data.script_name
+      @scalars = data.scalars
+      @imports = data.imports
+      @annotations = data.annotations
+      @include_deprecated = data.include_deprecated
+      hash.each do |key, value|
+        singleton_class.send(:define_method, key) { value }
+      end
+    end
+
+    def context
+      binding
+    end
+  end
+
+  require 'fileutils'
+
+  def write(root, path, name, template, args)
+    dirname = File.dirname(root+path+'/'+name)
+    unless File.directory?(dirname)
+      FileUtils.mkdir_p(dirname)
+    end
+    args[:package_name] = package_name + path.gsub('/', '.')
+    hash_binding = HashBinding.new(self, args)
+    File.write(root+path+'/'+name, reformat(template.result(hash_binding.context)))
+  end
 
   DEFAULT_SCALAR = Scalar.new(
     type_name: nil,
@@ -97,11 +171,51 @@ class GraphQLJavaGen
     "#{word}Value"
   end
 
+  def class_head
+    res = "
+    package #{package_name};
+
+    import com.google.gson.Gson;
+    import com.google.gson.GsonBuilder;
+    import com.google.gson.JsonElement;
+    import com.google.gson.JsonObject;
+    import com.shopify.graphql.support.AbstractResponse;
+    import com.shopify.graphql.support.Arguments;
+    import com.shopify.graphql.support.Error;
+    import com.shopify.graphql.support.Query;
+    import com.shopify.graphql.support.SchemaViolationError;
+    import com.shopify.graphql.support.TopLevelResponse;
+
+    import java.io.Serializable;
+    import java.util.ArrayList;
+    import java.util.List;
+    import java.util.Map;
+
+    import net.avicus.magma.api.inputs.*;
+    import net.avicus.magma.api.base.*;
+    import net.avicus.magma.api.inputs.*
+    "
+
+    schema.types.reject{ |type| type.name.start_with?('__') || type.scalar? }.each do |type|
+      name = type.name
+      unless type.kind == 'INPUT_OBJECT'
+        res += "\nimport net.avicus.magma.api.types.#{name.underscore}.*;" unless name.include?('Payload')
+        res += "\nimport net.avicus.magma.api.payloads.#{name.underscore.gsub('Payload', '')}.*;" if name.include?('Payload')
+      end
+    end
+
+    imports.each do |import|
+      res += "\nimport #{import};"
+    end
+    res
+  end
+
   def reformat(code)
     Reformatter.new(indent: " " * 4).reformat(code)
   end
 
   def java_input_type(type, non_null: false)
+    puts type.kind + " " + type.name unless type.name.nil?
     case type.kind
     when "NON_NULL"
       java_input_type(type.of_type, non_null: true)
@@ -110,7 +224,7 @@ class GraphQLJavaGen
     when 'LIST'
       "List<#{java_input_type(type.of_type.unwrap_non_null)}>"
     when 'INPUT_OBJECT', 'ENUM'
-      type.name
+      type.name.gsub('Payload', '')
     else
       raise NotImplementedError, "Unhandled #{type.kind} input type"
     end
@@ -124,38 +238,38 @@ class GraphQLJavaGen
     when 'LIST'
       "List<#{java_output_type(type.of_type)}>"
     when 'ENUM', 'OBJECT', 'INTERFACE', 'UNION'
-      type.name
+      type.name.gsub('Payload', '')
     else
       raise NotImplementedError, "Unhandled #{type.kind} response type"
     end
   end
 
-  def generate_build_input_code(expr, type, depth: 1)
+  def generate_build_input_code(expr, type, depth: 1, name: 'builder()')
     type = type.unwrap_non_null
     case type.kind
     when 'SCALAR'
       if ['Int', 'Float', 'Boolean'].include?(type.name)
-        "_queryBuilder.append(#{expr});"
+        "#{name}.append(#{expr});"
       else
-        "Query.appendQuotedString(_queryBuilder, #{expr}.toString());"
+        "Query.appendQuotedString(#{name}, #{expr}.toString());"
       end
     when 'ENUM'
-      "_queryBuilder.append(#{expr}.toString());"
+      "#{name}.append(#{expr}.toString());"
     when 'LIST'
       item_type = type.of_type
       <<-JAVA
-        _queryBuilder.append('[');
+        #{name}.append('[');
 
         String listSeperator#{depth} = "";
         for (#{java_input_type(item_type)} item#{depth} : #{expr}) {
-          _queryBuilder.append(listSeperator#{depth});
+          #{name}.append(listSeperator#{depth});
           listSeperator#{depth} = ",";
-          #{generate_build_input_code("item#{depth}", item_type, depth: depth + 1)}
+          #{generate_build_input_code("item#{depth}", item_type, depth: depth + 1, name: name)}
         }
-        _queryBuilder.append(']');
+        #{name}.append(']');
       JAVA
     when 'INPUT_OBJECT'
-      "#{expr}.appendTo(_queryBuilder);"
+      "#{expr}.appendTo(#{name});"
     else
       raise NotImplementedError, "Unexpected #{type.kind} argument type"
     end
@@ -198,7 +312,7 @@ class GraphQLJavaGen
       end
       list_name
     when 'OBJECT'
-      "new #{type.name}(jsonAsObject(#{expr}, key))"
+      "new #{type.name.gsub('Payload', '')}(jsonAsObject(#{expr}, key))"
     when 'INTERFACE', 'UNION'
       "Unknown#{type.name}.create(jsonAsObject(#{expr}, key))"
     when 'ENUM'
@@ -218,7 +332,7 @@ class GraphQLJavaGen
       defs << "#{field.classify_name}ArgumentsDefinition argsDef"
     end
     if field.subfields?
-      defs << "#{field.type.unwrap.name}QueryDefinition queryDef"
+      defs << "#{field.type.unwrap.name.gsub('Payload', '')}QueryDefinition queryDef"
     end
     defs.join(', ')
   end
@@ -297,7 +411,7 @@ class GraphQLJavaGen
         doc << "\n*"
         doc << "\n*"
       else
-        doc << '*'        
+        doc << '*'
       end
       doc << ' @deprecated '
       doc << element.deprecation_reason

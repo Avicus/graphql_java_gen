@@ -1,0 +1,40 @@
+<%= class_head %>
+
+public enum <%= type.name %> {
+  <% type.enum_values(include_deprecated: include_deprecated).each do |value| %>
+    <%= java_doc(value) %>
+    <%= value.deprecated? ? "@Deprecated\n" : '' -%>
+    <%= value.upcase_name %>,
+  <% end %>
+
+  UNKNOWN_VALUE;
+
+  public static <%= type.name %> fromGraphQl(String value) {
+    if (value == null) {
+      return null;
+    }
+
+    switch (value) {
+      <% type.enum_values.each do |value| %>
+        case "<%= value.name %>": {
+          return <%= value.upcase_name %>;
+        }
+      <% end %>
+        default: {
+          return UNKNOWN_VALUE;
+        }
+    }
+  }
+  public String toString() {
+    switch (this) {
+      <% type.enum_values.each do |value| %>
+        case <%= value.upcase_name %>: {
+          return "<%= value.name %>";
+        }
+      <% end %>
+        default: {
+          return "";
+        }
+    }
+  }
+}
