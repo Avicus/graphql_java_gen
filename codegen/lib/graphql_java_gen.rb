@@ -215,7 +215,6 @@ class GraphQLJavaGen
   end
 
   def java_input_type(type, non_null: false)
-    puts type.kind + " " + type.name unless type.name.nil?
     case type.kind
     when "NON_NULL"
       java_input_type(type.of_type, non_null: true)

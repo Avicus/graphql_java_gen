@@ -62,7 +62,11 @@ public class <%= class_name %> extends AbstractResponse<<%= class_name %>> <%= j
     <% fields.each do |field| %>
         <%= java_doc(field) %>
         <%= java_annotations(field) %>
-        public <%= java_output_type(field.type) %> get<%= field.classify_name %>() {
+        <% type = java_output_type(field.type) %>
+        <% isBool = type == "Boolean" %>
+        <% name = field.classify_name %>
+        <% startIs = name.include?("Is") %>
+        public <%= type %> <%= isBool ? "" : "get" %><%= isBool ? (startIs ? name.camelize(:lower) : 'is' + name) : field.classify_name %>() {
           return (<%= java_output_type(field.type) %>) get("<%= field.name %>");
         }
 
