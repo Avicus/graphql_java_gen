@@ -65,7 +65,7 @@ public class <%= class_name %> extends AbstractResponse<<%= class_name %>> <%= j
         <% type = java_output_type(field.type) %>
         <% isBool = type == "Boolean" %>
         <% name = field.classify_name %>
-        <% startIs = name.include?("Is") %>
+        <% startIs = name.include?("Is") || name.include?("Has") %>
         public <%= type %> <%= isBool ? "" : "get" %><%= isBool ? (startIs ? name.camelize(:lower) : 'is' + name) : field.classify_name %>() {
           return (<%= java_output_type(field.type) %>) get("<%= field.name %>");
         }
