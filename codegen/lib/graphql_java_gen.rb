@@ -25,6 +25,8 @@ class GraphQLJavaGen
   end
 
   def save(path)
+    FileUtils.rm_rf(path)
+
     write(path, "", "QLBuilder.java", BASE, {schema: schema})
     [[:query, schema.query_root_name], [:mutation, schema.mutation_root_name]].each do |operation_type, root_name|
       next unless root_name
