@@ -7,11 +7,12 @@ require 'erb'
 require 'set'
 
 class GraphQLJavaGen
-  attr_reader :schema, :package_name, :scalars, :imports, :script_name, :schema_name, :include_deprecated, :annotations
+  attr_reader :schema, :package_name, :scalars, :imports, :script_name, :schema_name, :include_deprecated, :annotations, :mutation_returns
 
   def initialize(schema,
     package_name:, nest_under:, script_name: 'graphql_java_gen gem',
-    custom_scalars: [], custom_annotations: [], include_deprecated: false
+    custom_scalars: [], custom_annotations: [], include_deprecated: false,
+    mutation_returns: {}
   )
     @schema = schema
     @schema_name = nest_under
@@ -22,6 +23,7 @@ class GraphQLJavaGen
     @annotations = custom_annotations
     @imports = (@scalars.values.map(&:imports) + @annotations.map(&:imports)).flatten.sort.uniq
     @include_deprecated = include_deprecated
+    @mutation_returns = mutation_returns
   end
 
   def save(path)
@@ -34,34 +36,37 @@ class GraphQLJavaGen
     end
 
     schema.types.reject{ |type| type.name.start_with?('__') || type.scalar? }.each do |type|
+      mutation_ret = mutation_returns.detect {|k, v| v.include?(type.name)}
+      mutation_ret = mutation_ret[0] unless mutation_ret.nil?
       case type.kind
       when 'OBJECT', 'INTERFACE', 'UNION'
         fields = type.fields(include_deprecated: include_deprecated) || []
-        name = (type.name + 'Query')
-        where = "/types/#{name.underscore}"
-        where = type.name.include?('Payload') ? "/payloads/#{name.underscore}" : where
-        where = where.gsub('_query', '')
-        name = name.gsub('Payload', '')
+        name = replace_name(type.name + 'Query')
+        where = replace_path(type, mutation_ret)
         write(path, where, "#{name}Definition.java", QUERY_DEF, {type: type, name: name})
-        write(path, where, "#{name}.java", TYPE_QUERY, {type: type, fields: fields, name: name})
+        mutations = mutation_returns.detect {|k, v| v.include?(type.name)}
+        mutations = mutations[1] unless mutations.nil?
+        write(path, where, "#{name}.java", TYPE_QUERY, {type: type, fields: fields, name: name, where: package_name+where, mutations: mutations})
         fields.each do |field|
           next if field.name == "id" && type.object? && type.implement?("Node")
           unless field.optional_args.empty?
-            write(path,  "/types/#{type.name.underscore}", "#{field.classify_name}Arguments.java", FIELD_ARGS, {field: field})
-            write(path, "/types/#{type.name.underscore}", "#{field.classify_name}ArgumentsDefinition.java", ARG_DEF, {field: field})
+            field_where = where + '/' + field.classify_name.underscore.singularize + '_arguments'
+            write(path,  field_where, "#{field.classify_name}Arguments.java", FIELD_ARGS, {field: field})
+            write(path, field_where, "#{field.classify_name}ArgumentsDefinition.java", ARG_DEF, {field: field})
           end
         end
         unless type.object?
-          write(path, "/types/#{type.name.underscore}", "#{type.name}.java", OBJECT_INT, {type: type})
+          write(path, where, "#{type.name}.java", OBJECT_INT, {type: type})
         end
         class_name = type.object? ? type.name : "Unknown#{type.name}"
-        where = (class_name.include?('Payload') ? '/payloads/' : "/types/") + "#{type.name.underscore}"
-        class_name = class_name.gsub('Payload', '')
-        write(path, where, "#{class_name}.java", TYPE, {type: type, class_name: class_name, fields: fields})
+        where = replace_path(type, mutation_ret)
+        class_name = replace_name(class_name)
+        write(path, where, "#{class_name}.java", TYPE, {type: type, class_name: class_name, fields: fields, where: package_name+where, mutations: mutations})
       when 'INPUT_OBJECT'
         write(path, "/inputs", "#{type.name}.java", INPUT_OBJECT, {type: type})
       when 'ENUM'
-        write(path, "/types/#{type.name.underscore}", "#{type.name}.java", ENUM_DEF, {type: type})
+        where = replace_path(type, mutation_ret)
+        write(path, where, "#{type.name}.java", ENUM_DEF, {type: type})
       else
         raise NotImplementedError, "unhandled #{type.kind} type #{type.name}"
       end
@@ -91,7 +96,7 @@ class GraphQLJavaGen
 
   class HashBinding < GraphQLJavaGen
 
-    attr_reader :schema, :scalars, :imports, :script_name, :schema_name, :include_deprecated
+    attr_reader :schema, :scalars, :imports, :script_name, :schema_name, :include_deprecated, :mutation_returns
 
     def initialize(data, hash)
       @schema = data.schema
@@ -101,6 +106,7 @@ class GraphQLJavaGen
       @imports = data.imports
       @annotations = data.annotations
       @include_deprecated = data.include_deprecated
+      @mutation_returns = data.mutation_returns
       hash.each do |key, value|
         singleton_class.send(:define_method, key) { value }
       end
@@ -112,6 +118,23 @@ class GraphQLJavaGen
   end
 
   require 'fileutils'
+
+  def replace_name(string)
+    string = string.gsub('Payload', '')
+
+    string
+  end
+
+  def replace_path(type, mut)
+    string = "/types/#{type.name.underscore}"
+    string = "/mutations/#{mut.to_s.underscore}/#{type.name.underscore}" unless mut.nil?
+    string = type.name.include?('Payload') ? "/mutations/#{type.name.underscore}" : string
+    string = type.name.include?('Mutation') ? "/mutations" : string
+    string = string.gsub('_query', '')
+    string = string.gsub('_payload', '')
+
+    string
+  end
 
   def write(root, path, name, template, args)
     dirname = File.dirname(root+path+'/'+name)
@@ -194,15 +217,18 @@ class GraphQLJavaGen
     import java.util.Map;
 
     import net.avicus.magma.api.inputs.*;
-    import net.avicus.magma.api.base.*;
-    import net.avicus.magma.api.inputs.*
     "
 
     schema.types.reject{ |type| type.name.start_with?('__') || type.scalar? }.each do |type|
       name = type.name
       unless type.kind == 'INPUT_OBJECT'
-        res += "\nimport net.avicus.magma.api.types.#{name.underscore}.*;" unless name.include?('Payload')
-        res += "\nimport net.avicus.magma.api.payloads.#{name.underscore.gsub('Payload', '')}.*;" if name.include?('Payload')
+        pack_name = name.underscore.gsub('_query', '').gsub('_payload', '')
+        where = name.include?('Mutation') ? 'mutations' : "types.#{pack_name}"
+        where = "mutations.#{pack_name}" if name.include?('Payload')
+        mutations = mutation_returns.detect {|k, v| v.include?(type.name)}
+        mutations = mutations[0] unless mutations.nil?
+        where = "mutations.#{mutations.to_s.underscore}.#{pack_name}" unless mutations.nil?
+        res += "\nimport net.avicus.magma.api.#{where}.*;" unless name.include?('Payload')
       end
     end
 
@@ -225,7 +251,7 @@ class GraphQLJavaGen
     when 'LIST'
       "List<#{java_input_type(type.of_type.unwrap_non_null)}>"
     when 'INPUT_OBJECT', 'ENUM'
-      type.name.gsub('Payload', '')
+      replace_name(type.name)
     else
       raise NotImplementedError, "Unhandled #{type.kind} input type"
     end
@@ -239,7 +265,7 @@ class GraphQLJavaGen
     when 'LIST'
       "List<#{java_output_type(type.of_type)}>"
     when 'ENUM', 'OBJECT', 'INTERFACE', 'UNION'
-      type.name.gsub('Payload', '')
+      replace_name(type.name)
     else
       raise NotImplementedError, "Unhandled #{type.kind} response type"
     end
@@ -313,7 +339,7 @@ class GraphQLJavaGen
       end
       list_name
     when 'OBJECT'
-      "new #{type.name.gsub('Payload', '')}(jsonAsObject(#{expr}, key))"
+      "new #{replace_name(type.name)}(jsonAsObject(#{expr}, key))"
     when 'INTERFACE', 'UNION'
       "Unknown#{type.name}.create(jsonAsObject(#{expr}, key))"
     when 'ENUM'
@@ -333,7 +359,7 @@ class GraphQLJavaGen
       defs << "#{field.classify_name}ArgumentsDefinition argsDef"
     end
     if field.subfields?
-      defs << "#{field.type.unwrap.name.gsub('Payload', '')}QueryDefinition queryDef"
+      defs << "#{replace_name(field.type.unwrap.name)}QueryDefinition queryDef"
     end
     defs.join(', ')
   end

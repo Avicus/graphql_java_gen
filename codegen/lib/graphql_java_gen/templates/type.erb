@@ -1,5 +1,16 @@
 <%= class_head %>
 
+<% fields.each do |field| %>
+  <% unless where.include?('mutations') %>
+    <%= "import #{where.gsub('/', '.')}.#{field.classify_name.underscore.singularize + '_arguments'}.*;" %>
+  <% else %>
+    <%= "import #{where.gsub('/', '.')}.#{field.classify_name.underscore.singularize}.*;" %>
+    <% mutations.each do |m| %>
+      <%= "import #{where.gsub('/', '.')}.#{m}.*;" %>
+    <% end unless mutations.nil? %>
+  <% end %>
+<% end %>
+
 <%= java_doc(type) %>
 public class <%= class_name %> extends AbstractResponse<<%= class_name %>> <%= java_implements(type) %>{
 
