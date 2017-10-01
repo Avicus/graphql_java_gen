@@ -1,8 +1,7 @@
 <%= class_head %>
 
-import net.avicus.magma.api.types.avicus.AvicusQueryQuery;
-import net.avicus.magma.api.types.avicus.AvicusQueryQueryDefinition;
-import net.avicus.magma.api.mutations.*;
+<%= "import #{root_package}.types.#{schema_name.downcase}.*;" %>
+<%= "import #{root_package}.mutations.*;" %>
 
 public class QLBuilder {
   <% [[:query, schema.query_root_name], [:mutation, schema.mutation_root_name]].each do |operation_type, root_name| %>

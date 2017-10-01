@@ -142,6 +142,7 @@ class GraphQLJavaGen
       FileUtils.mkdir_p(dirname)
     end
     args[:package_name] = package_name + path.gsub('/', '.')
+    args[:root_package] = package_name
     hash_binding = HashBinding.new(self, args)
     File.write(root+path+'/'+name, reformat(template.result(hash_binding.context)))
   end
@@ -216,7 +217,7 @@ class GraphQLJavaGen
     import java.util.List;
     import java.util.Map;
 
-    import net.avicus.magma.api.inputs.*;
+    import #{root_package}.inputs.*;
     "
 
     schema.types.reject{ |type| type.name.start_with?('__') || type.scalar? }.each do |type|
@@ -228,7 +229,7 @@ class GraphQLJavaGen
         mutations = mutation_returns.detect {|k, v| v.include?(type.name)}
         mutations = mutations[0] unless mutations.nil?
         where = "mutations.#{mutations.to_s.underscore}.#{pack_name}" unless mutations.nil?
-        res += "\nimport net.avicus.magma.api.#{where}.*;" unless name.include?('Payload')
+        res += "\nimport #{root_package}.#{where}.*;" unless name.include?('Payload')
       end
     end
 
