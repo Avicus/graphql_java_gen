@@ -58,6 +58,10 @@ That generated code depends on the com.shopify.graphql.support package.
 The generated code includes a query builder that can be used to create a GraphQL
 query in a type-safe manner.
 
+Classes generated will contain a lot of unused imports. After generation, it is
+recommended that an IntelliJ code cleanup be ran before any VCS commits. Otherwise,
+the class should not be modified.
+
 ```java
 String queryString = ExampleSchema.query(query -> query
     .user(user -> user
