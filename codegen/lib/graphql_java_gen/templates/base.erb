@@ -6,12 +6,12 @@
 public class QLBuilder {
   <% [[:query, schema.query_root_name], [:mutation, schema.mutation_root_name]].each do |operation_type, root_name| %>
   <% next unless root_name %>
-  public static <%= root_name %>Query <%= operation_type %>(<%= root_name %>QueryDefinition queryDef) {
+  public static StringBuilder <%= operation_type %>(<%= root_name %>QueryDefinition queryDef) {
     StringBuilder queryString = new StringBuilder("<%= operation_type unless operation_type == :query %>{");
     <%= root_name %>Query query = new <%= root_name %>Query(queryString);
     queryDef.define(query);
     queryString.append('}');
-    return query;
+    return queryString;
   }
   <% end %>
 }
