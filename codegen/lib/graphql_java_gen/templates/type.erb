@@ -81,7 +81,7 @@ public class <%= class_name %> extends AbstractResponse<<%= class_name %>> <%= j
           return (<%= java_output_type(field.type) %>) get("<%= field.name %>");
         }
 
-        <% next if field.name == "id" && type.object? && type.implement?("Node") %>
+        <% next if field.name == "id" %>
         public <%= class_name %> set<%= field.classify_name %>(<%= java_output_type(field.type) %> arg) {
           optimisticData.put(getKey("<%= field.name %>"), arg);
           return this;
