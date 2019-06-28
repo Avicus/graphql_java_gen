@@ -165,10 +165,14 @@ public class <%= schema_name %> {
                     switch (fieldName) {
                       <% fields.each do |field| %>
                         case "<%= field.name %>": {
-                          <% generate_build_output_code("field.getValue()", field.type) do |statements, expr| %>
-                            <%= statements %>
-                            responseData.put(key, <%= expr %>);
-                          <% end %>
+                          try {
+                            <% generate_build_output_code("field.getValue()", field.type) do |statements, expr| %>
+                              <%= statements %>
+                              responseData.put(key, <%= expr %>);
+                            <% end %>
+                          } catch (Exception e) {
+                            throw new SchemaViolationError(this, key, field.getValue());
+                          }
                           break;
                         }
                       <% end %>
