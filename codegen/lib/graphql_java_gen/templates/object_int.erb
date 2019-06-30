@@ -1,5 +1,6 @@
 <%= class_head %>
 
+<%= java_doc(type, author: true) %>
 <% if type.name == 'Node' %>
   public interface <%= type.name %> extends com.shopify.graphql.support.Node {
 <% else %>

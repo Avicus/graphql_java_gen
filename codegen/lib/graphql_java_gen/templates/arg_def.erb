@@ -1,5 +1,10 @@
 <%= class_head %>
 
+<%= render_java_doc("Interface used to pass arguments for #{field.classify_name.downcase} queries.", "@author #{code_author}") %>
 public interface <%= field.classify_name %>ArgumentsDefinition {
+    <%= render_java_doc(
+      "Method called to generate the parts of the query.",
+      "@param args used to define which parts of the #{field.classify_name.singularize.downcase} to query by"
+    ) %>
     void define(<%= field.classify_name %>Arguments args);
 }

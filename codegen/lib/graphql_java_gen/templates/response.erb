@@ -1,31 +1,31 @@
 <%= class_head %>
 
+<%= render_java_doc("The response from executing a #{operation_type}.", "@author #{code_author}") %>
 public class <%= operation_type.capitalize %>Response {
     private TopLevelResponse response;
     private <%= root_name %> data;
 
+    <%= render_java_doc(
+      "Constructor",
+      "@param response generated from the API",
+      "@throws SchemaViolationError if the supplied data is invalid"
+    ) %>
     public <%= operation_type.capitalize %>Response(TopLevelResponse response) throws SchemaViolationError {
         this.response = response;
         this.data = response.getData() != null ? new <%= root_name %>(response.getData()) : null;
     }
 
+    <%= render_java_doc("@return the data of this operation") %>
     public <%= root_name %> getData() {
         return data;
     }
 
+    <%= render_java_doc("@return any errors thrown by the operation") %>
     public List<Error> getErrors() {
         return response.getErrors();
     }
 
-    public String toJson() {
-        return new Gson().toJson(response);
-    }
-
-    public String prettyPrintJson() {
-      final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-      return gson.toJson(response);
-    }
-
+    <%= render_java_doc("Parse a #{operation_type} from JSON.", "@param json containing the raw data", "@throws SchemaViolationError if the response contains invalid data") %>
     public static <%= operation_type.capitalize %>Response fromJson(String json) throws SchemaViolationError {
         final TopLevelResponse response = new Gson().fromJson(json, TopLevelResponse.class);
         return new <%= operation_type.capitalize %>Response(response);

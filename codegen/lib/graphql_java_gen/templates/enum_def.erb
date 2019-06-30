@@ -1,5 +1,6 @@
 <%= class_head %>
 
+<%= render_java_doc("@author #{code_author}") %>
 public enum <%= type.name %> {
   <% type.enum_values(include_deprecated: include_deprecated).each do |value| %>
     <%= java_doc(value) %>

@@ -1,17 +1,32 @@
 <%= class_head %>
 
 <% fields.each do |field| %>
-  <% unless where.include?('mutations') %>
-    <%= "import #{where.gsub('/', '.')}.#{field.classify_name.underscore.singularize + '_arguments'}.*;" %>
-  <% else %>
-    <%= "import #{where.gsub('/', '.')}.#{field.classify_name.underscore.singularize}.*;" %>
+  <% if where.include?('mutations') %>
+    <%= "import #{where.gsub('/', '.')}.#{to_package(field.classify_name.underscore.singularize)}.*;" %>
     <% mutations.each do |m| %>
       <%= "import #{where.gsub('/', '.')}.#{m}.*;" %>
     <% end unless mutations.nil? %>
+  <% elsif where.include?('base') %>
+    <%= "import #{where.gsub('/', '.')}.#{to_package(field.classify_name.underscore.singularize)}.*;" %>
   <% end %>
 <% end %>
 
+<% unless name.include?("Base") %>
+  <%= render_java_doc(
+    "Builder class which defines which fields should be queried when generating #{name.gsub('Query', '').downcase} objects.",
+    "@author #{code_author}"
+  ) %>
+<% else %>
+  <%= render_java_doc(
+    "The entry point for executing all queries.",
+    "@author #{code_author}"
+  ) %>
+<% end %>
 public class <%= name %> extends Query<<%= name %>> {
+    <%= render_java_doc(
+      "Constructor",
+      "@param builder pulled in from the API"
+    ) %>
     public <%= name %>(StringBuilder builder) {
         super(builder);
         <% if type.object? && type.implement?("Node") %>
@@ -22,6 +37,7 @@ public class <%= name %> extends Query<<%= name %>> {
         <% end %>
     }
 
+    <%= render_java_doc("@return builder which arguments are being added to") %>
     private StringBuilder builder() {
         return _queryBuilder;
     }
@@ -76,6 +92,7 @@ public class <%= name %> extends Query<<%= name %>> {
     <% end %>
 
     <% if schema.root_name?(name) %>
+      <%= render_java_doc("@return stringified builder") %>
       public String toString() {
           return builder().toString();
       }

@@ -1,19 +1,22 @@
 <%= class_head %>
 
 <% fields.each do |field| %>
-  <% unless where.include?('mutations') %>
-    <%= "import #{where.gsub('/', '.')}.#{field.classify_name.underscore.singularize + '_arguments'}.*;" %>
-  <% else %>
-    <%= "import #{where.gsub('/', '.')}.#{field.classify_name.underscore.singularize}.*;" %>
+  <% if where.include?('mutations') %>
+    <%= "import #{where.gsub('/', '.')}.#{to_package(field.classify_name.underscore.singularize)}.*;" %>
     <% mutations.each do |m| %>
       <%= "import #{where.gsub('/', '.')}.#{m}.*;" %>
     <% end unless mutations.nil? %>
   <% end %>
 <% end %>
 
-<%= java_doc(type) %>
+<%= java_doc(type, author: true) %>
 public class <%= class_name %> extends AbstractResponse<<%= class_name %>> <%= java_implements(type) %>{
 
+    <%= render_java_doc(
+      "Constructor",
+      "@param fields pulled in from the API",
+      "@throws SchemaViolationError if the supplied data is invalid"
+    ) %>
     public <%= class_name %>(JsonObject fields) throws SchemaViolationError {
       for (Map.Entry<String, JsonElement> field : fields.entrySet()) {
         String key = field.getKey();
@@ -51,10 +54,19 @@ public class <%= class_name %> extends AbstractResponse<<%= class_name %>> <%= j
     <% end %>
 
     <% if type.object? %>
+        <%= render_java_doc(
+          "Get the name of this object",
+          "@return the name of this object as defined by the graph API"
+        ) %>
         public String getGraphQlTypeName() {
             return "<%= type.name %>";
         }
     <% else %>
+        <%= render_java_doc(
+          "Create this object using API data.",
+          "@param fields pulled in from the API",
+          "@return the created object from the API"
+        ) %>
         public static <%= type.name %> create(JsonObject fields) throws SchemaViolationError {
             String typeName = fields.getAsJsonPrimitive("__typename").getAsString();
             switch (typeName) {
@@ -69,6 +81,10 @@ public class <%= class_name %> extends AbstractResponse<<%= class_name %>> <%= j
             }
         }
 
+        <%= render_java_doc(
+          "Get the name of this object",
+          "@return the name of this object as defined by the graph API"
+        ) %>
         public String getGraphQlTypeName() {
             return (String) get("__typename");
         }
@@ -86,12 +102,24 @@ public class <%= class_name %> extends AbstractResponse<<%= class_name %>> <%= j
         }
 
         <% next if field.name == "id" %>
+        <% prefix = "" %>
+        <% prefix = (field.type == "Boolean" ? "if" : "the") unless (field.description.start_with?("If") || field.description.start_with?("The")) %>
+        <%= render_java_doc(
+          "Set #{prefix} #{field.description.downcase}",
+          "@param arg new value to set",
+          "@return this object, with the new value"
+        ) %>
         public <%= class_name %> set<%= field.classify_name %>(<%= java_output_type(field.type) %> arg) {
           optimisticData.put(getKey("<%= field.name %>"), arg);
           return this;
         }
     <% end %>
 
+      <%= render_java_doc(
+        "Check if the given key can be unwrapped to an object",
+        "@param key to check",
+        "@return if the key can be unwrapped"
+      ) %>
       public boolean unwrapsToObject(String key) {
         switch (getFieldName(key)) {
           <% fields.each do |field| %>
@@ -99,5 +127,14 @@ public class <%= class_name %> extends AbstractResponse<<%= class_name %>> <%= j
           <% end %>
           default: return false;
         }
+      }
+
+      @Override
+      public String toString() {
+        return "<%= class_name %>{" +
+          <% fields.each do |field| %>
+            "<%= field.name %>=" + get("<%= field.name %>") +
+          <% end %>
+          "} " + super.toString();
       }
 }

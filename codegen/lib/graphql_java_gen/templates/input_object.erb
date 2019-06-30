@@ -1,15 +1,23 @@
 <%= class_head %>
 
+<%= render_java_doc(
+  "Input to the #{type.name.gsub("Input", "").underscore.split("_").reverse.join(" ").downcase} mutation.",
+  "@author #{code_author}"
+) %>
 public class <%= type.name %> implements Serializable {
     <% type.required_input_fields.each do |field| %>
       private <%= java_input_type(field.type) %> <%= escape_reserved_word(field.camelize_name) %>;
     <% end %>
     <% type.optional_input_fields.each do |field| %>
       private <%= java_input_type(field.type) %> <%= escape_reserved_word(field.camelize_name) %>;
-      private boolean <%= field.camelize_name %>Seen = false;
+      private boolean <%= field.camelize_name %>Seen = false; // If the <%= field.camelize_name %> field has been returned by a query or set.
     <% end %>
 
     <% unless type.required_input_fields.empty? %>
+      <%= render_java_doc(
+        "Constructor",
+        type.required_input_fields.map{|f| "@param #{escape_reserved_word(f.camelize_name)} #{(f.description ? f.description : "the #{type.name.underscore.split("_")[0]}'s #{f.name}")}"}
+      ) %>
       public <%= type.name %>(<%= type.required_input_fields.map{ |field| "#{java_input_type(field.type)} #{escape_reserved_word(field.camelize_name)}" }.join(', ') %>) {
           <% type.required_input_fields.each do |field| %>
               this.<%= escape_reserved_word(field.camelize_name) %> = <%= escape_reserved_word(field.camelize_name) %>;
@@ -18,11 +26,12 @@ public class <%= type.name %> implements Serializable {
     <% end %>
 
     <% type.required_input_fields.each do |field| %>
+      <%= java_doc(field) %>
       <%= java_annotations(field) %>
       public <%= java_input_type(field.type) %> get<%= field.classify_name %>() {
           return <%= escape_reserved_word(field.camelize_name) %>;
       }
-
+      
       public <%= type.name %> set<%= field.classify_name %>(<%= java_annotations(field, in_argument: true) %><%= java_input_type(field.type) %> <%= escape_reserved_word(field.camelize_name) %>) {
           this.<%= escape_reserved_word(field.camelize_name) %> = <%= escape_reserved_word(field.camelize_name) %>;
           return this;
@@ -30,6 +39,7 @@ public class <%= type.name %> implements Serializable {
 
     <% end %>
     <% type.optional_input_fields.each do |field| %>
+      <%= java_doc(field) %>
       <%= java_annotations(field) %>
       public <%= java_input_type(field.type) %> get<%= field.classify_name %>() {
           return <%= escape_reserved_word(field.camelize_name) %>;

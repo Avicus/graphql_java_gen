@@ -1,12 +1,15 @@
 <%= class_head %>
 
+<%= render_java_doc("Arguments which are used when querying #{field.classify_name.downcase}.", "@author #{code_author}") %>
 public class <%= field.classify_name %>Arguments extends Arguments {
     private final StringBuilder builder;
 
+    <%= render_java_doc("@return builder which arguments are being added to") %>
     private StringBuilder builder() {
       return builder;
     }
 
+    <%= render_java_doc("Constructor", "@param builder which arguments should be added to") %>
     public <%= field.classify_name %>Arguments(StringBuilder builder) {
         super(builder, <%= !!field.required_args.empty? %>);
         this.builder = builder;

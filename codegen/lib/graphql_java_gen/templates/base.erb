@@ -3,9 +3,15 @@
 <%= "import #{root_package}.types.#{schema_name.downcase}.*;" %>
 <%= "import #{root_package}.mutations.*;" %>
 
+<%= render_java_doc("Entry points for all base API operations.", "@author #{code_author}") %>
 public class QLBuilder {
   <% [[:query, schema.query_root_name], [:mutation, schema.mutation_root_name]].each do |operation_type, root_name| %>
   <% next unless root_name %>
+  <%= render_java_doc(
+    "Perform a #{operation_type.downcase}.",
+    "@param queryDef data which is passed in to the operation",
+    "@return the builder which all data has been added to")
+  %>
   public static StringBuilder <%= operation_type %>(<%= root_name %>QueryDefinition queryDef) {
     StringBuilder queryString = new StringBuilder("<%= operation_type unless operation_type == :query %>{");
     <%= root_name %>Query query = new <%= root_name %>Query(queryString);

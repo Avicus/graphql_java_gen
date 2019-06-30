@@ -7,12 +7,12 @@ require 'erb'
 require 'set'
 
 class GraphQLJavaGen
-  attr_reader :schema, :package_name, :scalars, :imports, :script_name, :schema_name, :include_deprecated, :annotations, :mutation_returns
+  attr_reader :schema, :package_name, :scalars, :imports, :script_name, :schema_name, :include_deprecated, :annotations, :mutation_returns, :code_author
 
   def initialize(schema,
     package_name:, nest_under:, script_name: 'graphql_java_gen gem',
     custom_scalars: [], custom_annotations: [], include_deprecated: false,
-    mutation_returns: {}
+    mutation_returns: {}, code_author: "James Smith"
   )
     @schema = schema
     @schema_name = nest_under
@@ -24,6 +24,15 @@ class GraphQLJavaGen
     @imports = (@scalars.values.map(&:imports) + @annotations.map(&:imports)).flatten.sort.uniq
     @include_deprecated = include_deprecated
     @mutation_returns = mutation_returns
+    @code_author = code_author
+  end
+
+  def to_package(str)
+    str.gsub("_", ".")
+  end
+
+  def to_path(str)
+    str.gsub("_", "/")
   end
 
   def save(path)
@@ -50,7 +59,7 @@ class GraphQLJavaGen
         fields.each do |field|
           next if field.name == "id" && type.object? && type.implement?("Node")
           unless field.optional_args.empty?
-            field_where = where + '/' + field.classify_name.underscore.singularize + '_arguments'
+            field_where = where + '/' + to_path(field.classify_name.underscore.singularize)
             write(path,  field_where, "#{field.classify_name}Arguments.java", FIELD_ARGS, {field: field})
             write(path, field_where, "#{field.classify_name}ArgumentsDefinition.java", ARG_DEF, {field: field})
           end
@@ -133,7 +142,7 @@ class GraphQLJavaGen
     string = string.gsub('_query', '')
     string = string.gsub('_payload', '')
 
-    string
+    to_path(string)
   end
 
   def write(root, path, name, template, args)
@@ -143,6 +152,7 @@ class GraphQLJavaGen
     end
     args[:package_name] = package_name + path.gsub('/', '.')
     args[:root_package] = package_name
+    args[:code_author] = code_author
     hash_binding = HashBinding.new(self, args)
     File.write(root+path+'/'+name, reformat(template.result(hash_binding.context)))
   end
@@ -229,7 +239,7 @@ class GraphQLJavaGen
         mutations = mutation_returns.detect {|k, v| v.include?(type.name)}
         mutations = mutations[0] unless mutations.nil?
         where = "mutations.#{mutations.to_s.underscore}.#{pack_name}" unless mutations.nil?
-        res += "\nimport #{root_package}.#{where}.*;" unless name.include?('Payload')
+        res += "\nimport #{root_package}.#{to_package(where)}.*;" unless name.include?('Payload')
       end
     end
 
@@ -425,32 +435,27 @@ class GraphQLJavaGen
     end
   end
 
-  def java_doc(element)
-    doc = ''
+  def render_java_doc(*lines)
+    lines = lines.flatten
+    return "" if lines.nil? || lines.empty?
+    res = "/**\n"
+    lines.each do |line|
+      res += "* #{line}\n"
+    end
+    res + "*/"
+  end
+
+  def java_doc(element, author: false)
+    lines = []
     unless element.description.nil?
-      description = wrap_text(element.description.dup, 100)
-      description = description.chomp("\n").gsub("\n", "\n* ")
-      doc << '* '
-      doc << description
+      lines << element.description
     end
 
     if element.respond_to?(:deprecated?) && element.deprecated?
-      unless doc.empty?
-        doc << "\n*"
-        doc << "\n*"
-      else
-        doc << '*'
-      end
-      doc << ' @deprecated '
-      doc << element.deprecation_reason
+      lines << " @deprecated #{element.deprecation_reason}"
     end
 
-    doc.empty? ? doc : "/**\n" + doc + "\n*/"
-  end
-
-  def wrap_text(text, col_width=80)
-    text.gsub!( /(\S{#{col_width}})(?=\S)/, '\1 ' )
-    text.gsub!( /(.{1,#{col_width}})(?:\s+|$)/, "\\1\n" )
-    text
+    lines << " @author #{code_author}" if author
+    render_java_doc(lines)
   end
 end
