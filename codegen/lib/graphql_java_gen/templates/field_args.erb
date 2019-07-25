@@ -16,7 +16,11 @@ public class <%= field.classify_name %>Arguments extends Arguments {
     }
 
     <% field.optional_args.each do |arg| %>
-        <%= java_doc(arg) %>
+        <%= render_java_doc(
+          "Query by #{escape_reserved_word(arg.camelize_name)}.",
+          "@param value to supply to the query",
+          "@return this object with the added query parameter"
+        ) %>
         public <%= field.classify_name %>Arguments <%= escape_reserved_word(arg.camelize_name) %>(<%= java_input_type(arg.type) %> value) {
             if (value != null) {
                 startArgument("<%= arg.name %>");

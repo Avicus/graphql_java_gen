@@ -31,7 +31,7 @@ public class <%= type.name %> implements Serializable {
       public <%= java_input_type(field.type) %> get<%= field.classify_name %>() {
           return <%= escape_reserved_word(field.camelize_name) %>;
       }
-      
+
       public <%= type.name %> set<%= field.classify_name %>(<%= java_annotations(field, in_argument: true) %><%= java_input_type(field.type) %> <%= escape_reserved_word(field.camelize_name) %>) {
           this.<%= escape_reserved_word(field.camelize_name) %> = <%= escape_reserved_word(field.camelize_name) %>;
           return this;
@@ -51,7 +51,10 @@ public class <%= type.name %> implements Serializable {
           return this;
       }
 
-      // Unsets the <%= escape_reserved_word(field.camelize_name) %> property so that it is not serialized.
+      <%= render_java_doc(
+        "Unset the #{escape_reserved_word(field.camelize_name)} property so that it is not serialized.",
+        "@return the object with the field unset"
+      ) %>
       public <%= type.name %> unset<%= field.classify_name %>() {
           this.<%= escape_reserved_word(field.camelize_name) %> = null;
           this.<%= field.camelize_name %>Seen = false;
@@ -60,6 +63,10 @@ public class <%= type.name %> implements Serializable {
 
     <% end %>
 
+    <%= render_java_doc(
+      "Append all of this object's set fields to the supplied string builder.",
+      "@param builder to append the data to"
+    ) %>
     public void appendTo(StringBuilder builder) {
       String separator = "";
       builder.append('{');
