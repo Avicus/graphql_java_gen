@@ -29,12 +29,13 @@ public class <%= name %> extends Query<<%= name %>> {
     ) %>
     public <%= name %>(StringBuilder builder) {
         super(builder);
-        <% if type.object? && type.implement?("Node") %>
-            startField("id");
+        <% if type.object? && (type.implement?("Node") || fields.any?{ |s| s.name == "_id" }) %>
+            startField("_id");
         <% end %>
         <% unless type.object? %>
             startField("__typename");
         <% end %>
+
     }
 
     <%= render_java_doc("@return builder which arguments are being added to") %>
@@ -43,7 +44,7 @@ public class <%= name %> extends Query<<%= name %>> {
     }
 
     <% fields.each do |field| %>
-        <% next if field.name == "id" && type.object? && type.implement?("Node") %>
+        <% next if field.name == "_id" && type.object? %>
         <% unless field.optional_args.empty? %>
           <%= java_doc(field) %>
           public <%= name %> <%= escape_reserved_word(field.camelize_name.gsub('Payload', '')) %>(<%= java_arg_defs(field, skip_optional: true) %>) {
