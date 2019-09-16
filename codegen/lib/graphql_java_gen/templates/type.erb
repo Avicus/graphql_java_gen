@@ -1,7 +1,7 @@
 <%= class_head %>
 
 <% fields.each do |field| %>
-  <% if where.include?('mutations') %>
+  <% if class_name.downcase.include?('mutation') %>
     <%= "import #{where.gsub('/', '.')}.#{to_package(field.classify_name.underscore.singularize)}.*;" %>
     <% mutations.each do |m| %>
       <%= "import #{where.gsub('/', '.')}.#{m}.*;" %>
